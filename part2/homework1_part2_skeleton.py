@@ -59,13 +59,41 @@ def reference_reduction_source():
 def homework_reduction_source(partitions):
     # header
     function = "void homework_reduction(reduce_type *a, int size) {"
-    
-    # implement me!
-    function_body = ""
 
-    # closing brace
+    # create the dependency chain
+    chain = []
+
+    chain.append("""    int part_size = size / {n};""".format(n=partitions))
+
+    # create temps for each partition
+    for p in range(0,partitions):
+        chain.append("""    float part{p} = 0;""".format(p=p))#b[i+{offset}];""".format(u=u, offset=u))
+
+    chain.append("""    for(int i = 0; i<part_size; i+=1) {""")
+
+    for p in range(0,partitions):
+        chain.append(""" \
+     part{p} += a[part_size*{p} + i]; \
+""".format(p=p))
+
+        
+    loop_close = "    }"
+
+    close = []
+    # store the final value to memory
+    for p in range(1,partitions):
+        close.append("""    part0 += part{p};\n""".format(p=p))
+
+    # return result
+    result = """    a[0] = part0;\n"""
+
+    # close the loop
+    # close the function
     function_close = "}"
-    return "\n".join([function, function_body,function_close])
+
+    # join together all the parts to make a complete function
+    return "\n".join([function, "\n".join(chain), loop_close, "".join(close), result, function_close])
+ 
 
 # String for the main function, including timings and
 # reference checks.
