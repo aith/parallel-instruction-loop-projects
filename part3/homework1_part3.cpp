@@ -1,18 +1,21 @@
 #include <iostream>       
 #include <thread>        
+#include <chrono>
 
 using namespace std;
+using namespace std::chrono;
 
 #define ARR_SIZE 1024
 #define K 1048576
 
 /* For array a */
-void seq_inc(int volatile *a, int a_size) {
+int seq_inc(int volatile *a, int a_size) {
   for (int i = 0; i < a_size; i++) {
     while (a[i] < K) {
       a[i]++;
     }
   }
+  return 0;
 }
 
 /*
@@ -25,10 +28,10 @@ void seq_inc(int volatile *a, int a_size) {
 */
 
 int round_robin(int volatile *a, int a_size, int tid, int num_threads) {
-  for(int i=0; i < K; i++) {  // This order seems better because no dependency cahin
-    for(int i=tid; i < a_size; i+=num_threads) {
-      a[i]++;
-    }
+  for(int i=tid; i < a_size; i+=num_threads) {
+    for(int n=0; n < K; n++) {      
+      a[i]++;  
+    }         
   }
   return 0;
 }
@@ -36,6 +39,24 @@ int round_robin(int volatile *a, int a_size, int tid, int num_threads) {
 int round_robin_inc(int volatile *a, int a_size, int num_threads) {
   thread threads[num_threads];
   for(int i=0; i<num_threads; i++) {
+    threads[i] = thread(round_robin, a, a_size, i, num_threads);
+  }
+  for(int i=0; i< num_threads; i++) {
+    threads[i].join();
+  }
+  return 0;
+}
+
+int performance_round_robin(int volatile *a, int a_size, int tid, int num_threads) {
+  for(int i=tid; i < a_size; i+=num_threads) {  // This order is better because no dependency chain. Similar to Part 1
+    a[i] = K;  // What's Interesting is that, even if we just set it to K,
+  }            // it takes the same amount of time. The compiler precomputes the full number for us.
+  return 0;
+}
+
+int performance_round_robin_inc(int volatile *a, int a_size, int num_threads) {
+  thread threads[num_threads];
+  for(int i=0; i<num_threads; i++) {     
     threads[i] = thread(round_robin, a, a_size, i, num_threads);
   }
   for(int i=0; i< num_threads; i++) {
@@ -52,10 +73,32 @@ int main() {
   int d[ARR_SIZE] = {0};
   int num_threads = 4;
 
-  a[0] = 55;
-  //seq_inc(a, ARR_SIZE);
-  //cout << a[0] << endl;
+  /* Measure Speedupts */
+
+  auto a_start = high_resolution_clock::now();
+  seq_inc(a, ARR_SIZE);
+  auto a_stop = high_resolution_clock::now();
+  auto a_dur = duration_cast<nanoseconds>(a_stop - a_start);
+  double a_sec = a_dur.count()/1000000000.0;
+
+  auto b_start = high_resolution_clock::now();
   round_robin_inc(b, ARR_SIZE, num_threads);
-  cout << b[0] << endl;
+  auto b_stop = high_resolution_clock::now();
+  auto b_dur = duration_cast<nanoseconds>(b_stop - b_start);
+  double b_sec = b_dur.count()/1000000000.0;
+
+  auto c_start = high_resolution_clock::now();
+  performance_round_robin_inc(c, ARR_SIZE, num_threads);
+  auto c_stop = high_resolution_clock::now();
+  auto c_dur = duration_cast<nanoseconds>(c_stop - c_start);
+  double c_sec = c_dur.count()/1000000000.0;
+
+  cout << "a total duration (sec): " << a_sec << endl;
+  cout << "b total duration (sec): " << b_sec << endl;
+  cout << "c total duration (sec): " << c_sec << endl;
+  cout << endl;
+  cout << "b's speedup from a (%): " << a_sec / b_sec << endl;
+  cout << "c's speedup from a (%): " << a_sec / c_sec << endl;
+  cout << "c's speedup from b (%): " << b_sec / c_sec << endl;
 }
 
