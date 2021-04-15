@@ -113,10 +113,40 @@ tmp += {itr}.0f; \
 # factor will always be less than or equal to the unroll factor.
 def homework_loop_interleaved_source(chain_length, unroll_factor):
     function = "void homework_loop_interleaved(float *b, int size) {"
-    #implement me!
-    function_body = ""    
+    # loop header
+    loop = """  for (int i = 0; i < size; i+={uf}) {{""".format(uf=unroll_factor)
+
+    # read the original value from memory
+    init = ""
+
+    # create the dependency chain
+    chain = []
+
+    # create temps for each unroll
+    for u in range(0,unroll_factor):
+        chain.append("""    float tmp{u} = b[i+{offset}];""".format(u=u, offset=u))
+
+    for c in range(0,chain_length):
+        for u in range(0, unroll_factor):
+            chain.append("""    \
+tmp{u} += {itr}.0f; \
+                    """.format(u=u, itr=c+1))
+
+    for u in range(0, unroll_factor):
+        chain.append("""    b[i+{u}] = tmp{u}; """.format(u=u))
+
+    # store the final value to memory
+    close = ""#"    b[i] = tmp;"
+
+    # close the loop
+    loop_close = "  }"
+
+    # close the function
     function_close = "}"
-    return "\n".join([function, function_body, function_close])
+
+    # join together all the parts to make a complete function
+    return "\n".join([function, loop, init, "\n".join(chain), close, loop_close, function_close])
+
 
 # String for the main function, including timings and
 # reference checks.
