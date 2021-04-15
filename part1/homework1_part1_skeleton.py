@@ -67,10 +67,36 @@ def reference_loop_source(chain_length):
 # for example, try 1,2,4,8, etc.
 def homework_loop_sequential_source(chain_length, unroll_factor):
     function = "void homework_loop_sequential(float *b, int size) {"
-    #implement me!
-    function_body = ""
+
+    # loop header
+    loop = """  for (int i = 0; i < size; i+={uf}) {{""".format(uf=unroll_factor)
+
+    # read the original value from memory
+    init = "    float tmp;"
+
+    # create the dependency chain
+    chain = []
+    for u in range(1,unroll_factor+1):
+            
+        chain.append("""    tmp = b[i+{c}];""".format(c=u-1))
+
+        for c in range(1,chain_length+1):
+            chain.append("""    \
+tmp += {itr}.0f; \
+                    """.format(itr=c))
+        chain.append("""    b[i+{c}] = tmp; """.format(c=u-1))
+
+    # store the final value to memory
+    close = ""#"    b[i] = tmp;"
+
+    # close the loop
+    loop_close = "  }"
+
+    # close the function
     function_close = "}"
-    return "\n".join([function, function_body, function_close])
+
+    # join together all the parts to make a complete function
+    return "\n".join([function, loop, init, "\n".join(chain), close, loop_close, function_close])
 
 # Second homework function here! The specification for this
 # function is the same as the first homework function, except
