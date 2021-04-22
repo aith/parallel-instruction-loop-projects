@@ -48,8 +48,16 @@ int round_robin_inc(int volatile *a, int a_size, int num_threads) {
 }
 
 int performance_round_robin(int volatile *a, int a_size, int tid, int num_threads) {
-  for(int i=tid; i < a_size; i+=num_threads) {  // This order is better because no dependency chain. Similar to Part 1
-    a[i] = K;  // What's Interesting is that, even if we just set it to K,
+	int amt = a_size / num_threads;
+	int start = tid*amt;
+	int end = start+amt-1;
+	for(int i=start; i < end; i+=4) {  // Have the spots be sequential to utilize spatial locality ~ +50% speedup from b on 8 threads
+		for(int n=0; n < K; n++) {
+			a[i]++;  
+			a[i+1]++;  // Interleave to avoid data dependency ~ +40% speedup from b on 8 threads
+			a[i+2]++;
+			a[i+3]++;
+    }
   }            // it takes the same amount of time. The compiler precomputes the full number for us.
   return 0;
 }
@@ -57,7 +65,7 @@ int performance_round_robin(int volatile *a, int a_size, int tid, int num_thread
 int performance_round_robin_inc(int volatile *a, int a_size, int num_threads) {
   thread threads[num_threads];
   for(int i=0; i<num_threads; i++) {     
-    threads[i] = thread(round_robin, a, a_size, i, num_threads);
+    threads[i] = thread(performance_round_robin, a, a_size, i, num_threads);
   }
   for(int i=0; i< num_threads; i++) {
     threads[i].join();
@@ -71,7 +79,7 @@ int main() {
   int b[ARR_SIZE] = {0};
   int c[ARR_SIZE] = {0};
   int d[ARR_SIZE] = {0};
-  int num_threads = 4;
+  int num_threads = 8;
 
   /* Measure Speedupts */
 

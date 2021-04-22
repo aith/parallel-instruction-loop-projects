@@ -98,7 +98,7 @@ def homework_reduction_source(partitions):
 # String for the main function, including timings and
 # reference checks.
 main_source_string = """
-#define SIZE (1024*1024*512)
+#define SIZE (1024*1024*64)
 
 
 int main() {

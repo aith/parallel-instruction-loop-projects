@@ -69,7 +69,7 @@ void homework_reduction(reduce_type *a, int size) {
 
 }
 
-#define SIZE (1024*1024*512)
+#define SIZE (1024*1024*64)
 
 
 int main() {
